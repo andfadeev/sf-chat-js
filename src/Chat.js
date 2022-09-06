@@ -1,6 +1,7 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import {faker} from "@faker-js/faker";
+import {useDispatch, useSelector} from "react-redux";
+import {selectActiveChat, selectActiveChatMessages, selectActiveChatUserId, selectChats} from "./chatSlice";
 
 
 export const chatMessagePropType = PropTypes.shape({
@@ -23,8 +24,10 @@ ChatMessageComponent.propTypes = {
 
 function ChatListItemComponent({chat}) {
 
-    return <a href="asdf"
-        className="flex items-center px-3 py-2 text-sm transition duration-150 ease-in-out bg-gray-100 border-b border-gray-300 cursor-pointer focus:outline-none">
+    const dispatch = useDispatch();
+
+    return <div onClick={() => dispatch(selectActiveChat(chat.id))}
+        className="flex items-center px-3 py-2 text-sm transition duration-150 ease-in-out bg-gray-100 border-b border-gray-300 cursor-pointer focus:outline-none ">
         <img className="object-cover w-10 h-10 rounded-full"
             src={chat.imageUrl} alt="username"/>
         <div className="w-full pb-2">
@@ -34,7 +37,7 @@ function ChatListItemComponent({chat}) {
             </div>
             <div className="block ml-2 text-sm text-gray-600 overflow-hidden truncate">{chat.lastMessage}</div>
         </div>
-    </a>;
+    </div>;
 }
 
 const chatListItemPropType = PropTypes.shape({
@@ -49,33 +52,13 @@ ChatListItemComponent.propTypes = {
     chat: chatListItemPropType.isRequired
 };
 
-function generateChats(numberOfChats) {
-
-    return [...Array(numberOfChats).keys()].map((i) => {
-
-
-        return {
-            id: i,
-            name: faker.name.fullName(),
-            lastMessageDateTime: faker.date.past(),
-            lastMessage: faker.lorem.text(),
-            imageUrl: faker.image.imageUrl(null, null, null, true)
-
-        };
-    });
-
-
-}
-
-
 function ChatListComponent() {
-
-    const chats = generateChats(20);
+    const chats = useSelector(selectChats);
 
     return <div className="border-r border-gray-300 lg:col-span-1">
-        <ul className="overflow-y-auto h-[32rem]">
+        <ul className="overflow-y-auto h-[40rem] ">
             <h2 className="my-2 mb-2 ml-2 text-lg text-gray-600">Чаты</h2>
-            {/*<h2 className="my-2 mb-2 ml-2 text-lg text-gray-600">{JSON.stringify(generateChats(10))}</h2>*/}
+            {/*<h2 className="my-2 mb-2 ml-2 text-lg text-gray-600">{JSON.stringify(chats)}</h2>*/}
             <SearchBarComponent></SearchBarComponent>
             <li>
                 {chats.map(function(chat, index){
@@ -115,25 +98,8 @@ function SearchBarComponent() {
     </div>;
 }
 
-
-function generateChatMessages(numberOfMessages) {
-
-    return [...Array(numberOfMessages).keys()].map((i) => {
-
-        return {
-            id: i,
-            message: faker.lorem.text(),
-            sendDateTime: faker.date.past(),
-            messageDirection: faker.helpers.arrayElement(['Outgoing', 'Incoming'])
-        };
-    });
-
-
-}
-
 function ChatMessagesComponent() {
-
-    const chatMessages = generateChatMessages(100);
+    const chatMessages = useSelector(selectActiveChatMessages);
 
     return <div className="relative w-full p-6 overflow-y-auto h-[40rem]">
         <ul className="space-y-2">
@@ -146,15 +112,12 @@ function ChatMessagesComponent() {
 
 export function ChatComponent() {
 
-    // const chatMessages = useSelector(selectChatMessages);
-    
-    // const dispatch = useDispatch();
-
-    // const sendMessage = dispatch(sendMessageAction());
-
-    // console.log("chatMessages", chatMessages);
+    const activeChatUserId = useSelector(selectActiveChatUserId);
 
     return (<div className="container mx-auto">
+        <div>
+            Active chat id: {activeChatUserId}
+        </div>
         <div className="min-w-full border rounded lg:grid lg:grid-cols-3">
             <ChatListComponent/>
             <div className="col-span-1 lg:col-span-2 lg:block">
@@ -167,7 +130,6 @@ export function ChatComponent() {
                         </span>
                     </div>
                     <ChatMessagesComponent></ChatMessagesComponent>
-
 
                     <div className="flex items-center justify-between w-full p-3 border-t border-gray-300">
 
