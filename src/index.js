@@ -6,6 +6,7 @@ import reportWebVitals from './reportWebVitals';
 import './index.css';
 import {ChatComponent} from "./Chat";
 
+// todo: fix to use in sf-clj page
 const container = document.getElementById('root');
 const root = createRoot(container);
 

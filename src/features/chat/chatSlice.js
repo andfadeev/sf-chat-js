@@ -4,7 +4,23 @@ import {faker} from "@faker-js/faker";
 
 const userIds = [...Array(20).keys()];
 
+const fakeUsers =  userIds.map(userId => {
+    return {
+        id: userId,
+        name: faker.name.fullName(),
+        lastMessageDateTime: faker.date.past(),
+        lastMessage: faker.lorem.text(),
+        imageUrl: faker.image.imageUrl(null, null, null, true)};
+
+});
+
+function getUserById(userId) {
+    return fakeUsers.find(user => user.id == userId);
+}
+
 console.log("UserIDS", userIds);
+console.log("Fake Users", fakeUsers);
+console.log("Fake Users by id 5", getUserById(5));
 
 function generateFakeChatMessages(numberOfMessages) {
 
@@ -37,31 +53,20 @@ const initialState = {
 export const chatSlice = createSlice({
     name: 'chat',
     initialState,
-    // The `reducers` field lets us define reducers and generate associated actions
     reducers: {
-        // increment: (state) => {
-        //     // Redux Toolkit allows us to write "mutating" logic in reducers. It
-        //     // doesn't actually mutate the state because it uses the Immer library,
-        //     // which detects changes to a "draft state" and produces a brand new
-        //     // immutable state based off those changes
-        //     state.value += 1;
-        // },
-        // decrement: (state) => {
-        //     state.value -= 1;
-        // },
-        // // Use the PayloadAction type to declare the contents of `action.payload`
-        // incrementByAmount: (state, action) => {
-        //     state.value += action.payload;
-        // },
         selectActiveChat: (state, action) => {
             console.log("selectActiveChat", action.payload);
             state.activeChatUserId = action.payload;
+        },
+        publishMessage: (state, action) => {
+            console.log("publishMessage", action.payload);
+            state.messages.push(action.payload);
         },
     },
 
 });
 
-export const {  selectActiveChat } = chatSlice.actions;
+export const {  selectActiveChat, publishMessage } = chatSlice.actions;
 
 // The function below is called a selector and allows us to select a value from
 // the state. Selectors can also be defined inline where they're used instead of
@@ -71,6 +76,8 @@ export const selectChatMessages = state => state.chat.messages;
 export const selectCurrentUserId = state => state.chat.currentUserId;
 export const selectActiveChatUserId = state => state.chat.activeChatUserId;
 
+
+// todo: user groupby fn from a shim
 export const selectGroupedChatMessages = createSelector(
     [
         selectCurrentUserId,
@@ -106,12 +113,18 @@ export const selectChats = createSelector(
     ], 
     (groupedChatMessages) => {
         return Object.keys(groupedChatMessages).map(userId => {
-            return {
-                id: userId,
-                name: faker.name.fullName(),
-                lastMessageDateTime: faker.date.past(),
-                lastMessage: faker.lorem.text(),
-                imageUrl: faker.image.imageUrl(null, null, null, true)};
+
+            // return {
+            //     id: userId,
+            //     name: faker.name.fullName(),
+            //     lastMessageDateTime: faker.date.past(),
+            //     lastMessage: faker.lorem.text(),
+            //     imageUrl: faker.image.imageUrl(null, null, null, true)};
+
+            console.log("selectchatby", userId, getUserById(userId), fakeUsers);
+
+            return getUserById(userId);
+
 
         });
     });
