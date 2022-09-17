@@ -6,7 +6,7 @@ import {
     selectActiveChatMessages,
     selectActiveChatUserId,
     selectChats,
-    publishMessage
+    publishMessage, fetchMessages
 } from "./features/chat/chatSlice";
 import {faker} from "@faker-js/faker";
 
@@ -20,16 +20,23 @@ import {faker} from "@faker-js/faker";
 
 export const chatMessagePropType = PropTypes.shape({
     message: PropTypes.string.isRequired,
+    sendDatetime: PropTypes.string.isRequired,
     messageDirection: PropTypes.oneOf(['Incoming', 'Outgoing']).isRequired,
 });
 
-function ChatMessageComponent({message}) {
+export const userPropType = PropTypes.shape({
+    userpic: PropTypes.string.isRequired,
+});
 
-    return (<li className={`flex ${message.messageDirection === 'Incoming' ? 'justify-start' : 'justify-end'} `}>
+function ChatMessageComponent({message}) {
+    console.log("chat mesassssage:", message);
+
+    return <li className={`flex ${message.messageDirection === 'Incoming' ? 'justify-start' : 'justify-end'} `}>
         <div className="relative max-w-xl px-4 py-2 text-gray-700 bg-gray-100 rounded shadow">
             <span className="block">{message.message}</span>
+            <span className="block text-[10px] pt-1">{message.sendDatetime}</span>
         </div>
-    </li>);
+    </li>;
 }
 
 ChatMessageComponent.propTypes = {
@@ -43,13 +50,13 @@ function ChatListItemComponent({chat}) {
     return <div onClick={() => dispatch(selectActiveChat(chat.id))}
         className="flex items-center px-3 py-2 text-sm transition duration-150 ease-in-out bg-gray-100 border-b border-gray-300 cursor-pointer focus:outline-none ">
         <img className="object-cover w-10 h-10 rounded-full"
-            src={chat.imageUrl} alt="username"/>
+            src={chat.chatUser.userpic} alt="username"/>
         <div className="w-full pb-2">
             <div className="flex justify-between">
                 <span className="block ml-2 font-semibold text-gray-600">{chat.name}</span>
-                <span className="block ml-2 text-sm text-gray-600">{chat.lastMessageDateTime.toDateString()}</span>
+                {/*<span className="block ml-2 text-sm text-gray-600">{chat.lastMessageDateTime.toDateString()}</span>*/}
             </div>
-            <div className="block ml-2 text-sm text-gray-600 overflow-hidden truncate">{chat.lastMessage}</div>
+            <div className="block ml-2 text-sm text-gray-600 overflow-hidden truncate">{chat.recentMessage.message}</div>
         </div>
     </div>;
 }
@@ -57,8 +64,10 @@ function ChatListItemComponent({chat}) {
 const chatListItemPropType = PropTypes.shape({
     id: PropTypes.number.isRequired,
     name: PropTypes.string.isRequired,
-    lastMessageDateTime: PropTypes.string.isRequired,
-    lastMessage: PropTypes.string.isRequired,
+    // lastMessageDateTime: PropTypes.string.isRequired,
+    // lastMessage: PropTypes.string.isRequired,
+    recentMessage: chatMessagePropType.isRequired,
+    chatUser: userPropType.isRequired,
     imageUrl: PropTypes.string.isRequired,
 });
 
@@ -124,7 +133,7 @@ function ChatMessagesComponent() {
 
     return <div className="relative w-full p-6 overflow-y-auto h-[40rem]">
         <ul className="space-y-2">
-            {chatMessages.map(function(message, index){
+            {chatMessages && chatMessages.map(function(message, index){
                 return <ChatMessageComponent message={message} key={index} />;
             })}
             <li ref={bottomRef} />
@@ -154,10 +163,10 @@ export function SendMessageComponent() {
             onClick={() => dispatch(publishMessage({
                 id: faker.random.alphaNumeric(),
                 message: inputValue,
-                sendDateTime: faker.date.recent(),
+                sendDatetime: faker.date.recent(),
                 // todo: use currentUserId from redux state
-                senderId: 0,
-                receiverId: activeChatUserId,
+                sender: {id: 404},
+                receiver: {id: activeChatUserId},
                 // todo: don't need after this logic is added to the selector,
                 // todo: direction could be calculated based on senderId/receiverId and currentUserId
                 messageDirection: 'Outgoing'
@@ -176,12 +185,13 @@ export function SendMessageComponent() {
 
 export function ChatComponent() {
 
-    const activeChatUserId = useSelector(selectActiveChatUserId);
+    const dispatch = useDispatch();
 
-    return (<div className="container mx-auto">
-        <div>
-            Active chat id: {activeChatUserId}
-        </div>
+    useEffect(() => {
+        dispatch(fetchMessages());
+    });
+
+    return <div className="container mx-auto">
         <div className="min-w-full border rounded lg:grid lg:grid-cols-3">
             <ChatListComponent/>
             <div className="col-span-1 lg:col-span-2 lg:block">
@@ -199,5 +209,5 @@ export function ChatComponent() {
                 </div>
             </div>
         </div>
-    </div>);
+    </div>;
 }
