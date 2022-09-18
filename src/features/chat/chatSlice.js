@@ -3,31 +3,13 @@ import Immutable from "immutable";
 
 const axios = require('axios');
 
-// TODO: move something similar to test-server backend for local testing
-// function generateFakeChatMessages(numberOfMessages) {
-//
-//     return [...Array(numberOfMessages).keys()].map((i) => {
-//
-//         const senderId = faker.helpers.arrayElement(userIds);
-//         const receiverId = faker.helpers.arrayElement(userIds.filter(userId => userId !== senderId));
-//
-//         return {
-//             id: i,
-//             message: faker.lorem.text(),
-//             sendDateTime: faker.date.past(),
-//             senderId: senderId,
-//             receiverId: receiverId,
-//             messageDirection: faker.helpers.arrayElement(['Outgoing', 'Incoming'])
-//         };
-//     });
-//
-//
-// }
 
 // TODO: start using redux
 const initialState = {
-    currentUserId: 404,
-    activeChatUserId: 0,
+    // TODO: add fetch session call
+    // currentUserId: 404,
+    // TODO: show `select chat message if nothing is selected`
+    // activeChatUserId: 0,
     messages: {
         status: "idle",
         value: []
@@ -38,7 +20,6 @@ const initialState = {
 export const fetchMessages = createAsyncThunk(
     'chat/fetchMessages',
     async () => {
-        console.log("fetchMessages starting...");
         // TODO: create config state and get base url for backend api from state
         const response = await axios.get('http://localhost:8080/api/direct-messages');
         console.log("fetchMessages", response);
@@ -65,7 +46,7 @@ export const chatSlice = createSlice({
             .addCase(fetchMessages.pending, (state) => {
                 console.log("fetchMessages.pending");
                 state.messages.status = 'loading';
-                // state
+                state.messages.value = [];
             })
             .addCase(fetchMessages.fulfilled, (state, action) => {
                 console.log("fetchMessages.fulfilled", action);
@@ -85,7 +66,7 @@ export const {  selectActiveChat, publishMessage } = chatSlice.actions;
 export const selectCurrentUserId = state => state.chat.currentUserId;
 export const selectActiveChatUserId = state => state.chat.activeChatUserId;
 export const selectMessages = state => state.chat.messages.status === 'loaded'
-    ? state.chat.messages.value
+    ? Immutable.fromJS(state.chat.messages.value)
     : Immutable.List();
 
 export const selectMessagesWithDirection = createSelector(
@@ -130,30 +111,44 @@ export const selectActiveChatMessages = createSelector(
         selectMessagesGroupedSorted
     ],
     (activeChatUserId, messagesGrouped) => {
-        return messagesGrouped.get(activeChatUserId);
+        return activeChatUserId
+            ? messagesGrouped.get(activeChatUserId)
+            : Immutable.List();
     }
 );
 
+export const selectActiveChatMessagesToJS = createSelector(
+    [selectActiveChatMessages],
+    (chatMessages) => chatMessages.toJS()
+);
+
+// TODO: sort chats by recent message date
 export const selectChats = createSelector(
     [
         selectMessagesGroupedSorted,
         selectCurrentUserId
     ], 
     (messagesGrouped, currentUserId) => {
-        return messagesGrouped.keySeq().map(userId => {
-            const recentMessage = messagesGrouped.get(userId).first();
-            const chatUser = recentMessage.getIn(['sender', 'id']) === currentUserId
-                ? recentMessage.get('receiver')
-                : recentMessage.get('sender');
+        return messagesGrouped
+            .keySeq()
+            .map(userId => {
+                const recentMessage = messagesGrouped.get(userId).first();
+                const chatUser = recentMessage.getIn(['sender', 'id']) === currentUserId
+                    ? recentMessage.get('receiver')
+                    : recentMessage.get('sender');
 
-            return Immutable.fromJS(
-                {
-                    id: userId,
-                    recentMessage: recentMessage,
-                    chatUser: chatUser
-                }
-            );
-        });
+                return Immutable.fromJS(
+                    {
+                        id: userId,
+                        recentMessage: recentMessage,
+                        chatUser: chatUser
+                    }
+                );
+            });
     });
+
+export const selectChatsToJS = createSelector(
+    [selectChats],
+    (chats) =>  chats.toJS());
 
 export default chatSlice.reducer;

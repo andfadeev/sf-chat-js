@@ -5,6 +5,11 @@ import { store } from './app/store';
 import reportWebVitals from './reportWebVitals';
 import './index.css';
 import {ChatComponent} from "./Chat";
+import TimeAgo from 'javascript-time-ago';
+
+import ru from 'javascript-time-ago/locale/ru.json';
+
+TimeAgo.addDefaultLocale(ru);
 
 // todo: fix to use in sf-clj page
 const container = document.getElementById('root');

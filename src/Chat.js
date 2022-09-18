@@ -3,11 +3,12 @@ import PropTypes from 'prop-types';
 import {useDispatch, useSelector} from "react-redux";
 import {
     selectActiveChat,
-    selectActiveChatMessages,
-    // selectActiveChatUserId,
-    selectChats,
-    publishMessage, fetchMessages
+    selectActiveChatMessagesToJS,
+    publishMessage,
+    fetchMessages,
+    selectChatsToJS
 } from "./features/chat/chatSlice";
+import ReactTimeAgo from "react-time-ago";
 
 
 // todo: What's left:
@@ -19,8 +20,8 @@ import {
 
 export const chatMessagePropType = PropTypes.shape({
     message: PropTypes.string.isRequired,
-    sendDatetime: PropTypes.string.isRequired,
-    messageDirection: PropTypes.oneOf(['Incoming', 'Outgoing']).isRequired,
+    createdAt: PropTypes.string.isRequired,
+    direction: PropTypes.oneOf(['Incoming', 'Outgoing']).isRequired,
 });
 
 export const userPropType = PropTypes.shape({
@@ -28,12 +29,12 @@ export const userPropType = PropTypes.shape({
 });
 
 function ChatMessageComponent({message}) {
-    console.log("chat mesassssage:", message);
-
-    return <li className={`flex ${message.messageDirection === 'Incoming' ? 'justify-start' : 'justify-end'} `}>
+    return <li className={`flex ${message.direction === 'Incoming' ? 'justify-start' : 'justify-end'} `}>
         <div className="relative max-w-xl px-4 py-2 text-gray-700 bg-gray-100 rounded shadow">
-            <span className="block">{message.message}</span>
-            <span className="block text-[10px] pt-1">{message.sendDatetime}</span>
+            <span className="block text-sm">{message.message}</span>
+            <span className="block text-[10px] pt-1">
+                <ReactTimeAgo date={message.createdAt} timeStyle="twitter-first-minute"/>
+            </span>
         </div>
     </li>;
 }
@@ -75,7 +76,7 @@ ChatListItemComponent.propTypes = {
 };
 
 function ChatListComponent() {
-    const chats = useSelector(selectChats);
+    const chats = useSelector(selectChatsToJS);
 
     return <div className="border-r border-gray-300 lg:col-span-1">
         <ul className="overflow-y-auto h-[40rem] ">
@@ -123,7 +124,7 @@ function ChatListComponent() {
 
 function ChatMessagesComponent() {
     const bottomRef = useRef(null);
-    const chatMessages = useSelector(selectActiveChatMessages);
+    const chatMessages = useSelector(selectActiveChatMessagesToJS);
 
     useEffect(() => {
         // 👇️ scroll to bottom every time messages change
