@@ -3,7 +3,7 @@ const {faker} = require("@faker-js/faker");
 const express = require('express');
 const app = express();
 const hostname = '127.0.0.1';
-const port = 3000;
+const port = 8080;
 
 // todo create a list of messages and return them in the response
 
@@ -17,7 +17,6 @@ app.get('/', (req, res) => {
 app.get('/api/direct-messages', (req, res) => {
     const message1 = faker.lorem.text();
     const message2 = faker.lorem.text();
-    res.setHeader("sosi", "hui");
     res.send([
         {message: message1},
         {message: message2}
