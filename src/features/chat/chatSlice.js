@@ -104,45 +104,55 @@ export const selectMessagesWithDirection = createSelector(
     }
 );
 
-export const selectMessagesGrouped = createSelector(
+export const selectMessagesGroupedSorted = createSelector(
     [
         selectCurrentUserId,
         selectMessagesWithDirection
     ],
     (currentUserId, messages) => {
-        return messages.groupBy(
+        const messagesGrouped = messages.groupBy(
             message => {
                 return message.getIn(['sender', 'id']) === currentUserId
                     ? message.getIn(['receiver', 'id'])
                     : message.getIn(['sender', 'id']);
             }
         ).toMap();
+
+        return messagesGrouped
+            .mapEntries(([userId, messages]) =>
+                [userId, messages.sortBy(message => message.createdAt)]);
     }
 );
 
 export const selectActiveChatMessages = createSelector(
-    [selectActiveChatUserId, selectMessagesGrouped],
-    (activeChatUserId, groupedChatMessages) => {
-        console.log("selectActiveChatMessages", activeChatUserId, groupedChatMessages);
-        return groupedChatMessages[activeChatUserId];
+    [
+        selectActiveChatUserId,
+        selectMessagesGroupedSorted
+    ],
+    (activeChatUserId, messagesGrouped) => {
+        return messagesGrouped.get(activeChatUserId);
     }
 );
 
 export const selectChats = createSelector(
     [
-        selectMessagesGrouped
+        selectMessagesGroupedSorted,
+        selectCurrentUserId
     ], 
-    (groupedChatMessages) => {
-        return Object.keys(groupedChatMessages).map(userId => {
-            const recentMessage = groupedChatMessages[userId][0];
-            const chatUser = recentMessage.sender.id === 404 ? recentMessage.receiver : recentMessage.sender;
+    (messagesGrouped, currentUserId) => {
+        return messagesGrouped.keySeq().map(userId => {
+            const recentMessage = messagesGrouped.get(userId).first();
+            const chatUser = recentMessage.getIn(['sender', 'id']) === currentUserId
+                ? recentMessage.get('receiver')
+                : recentMessage.get('sender');
 
-            return {
-                id: userId,
-                recentMessage: recentMessage,
-                chatUser: chatUser
-            };
-
+            return Immutable.fromJS(
+                {
+                    id: userId,
+                    recentMessage: recentMessage,
+                    chatUser: chatUser
+                }
+            );
         });
     });
 
