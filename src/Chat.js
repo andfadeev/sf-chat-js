@@ -4,11 +4,10 @@ import {useDispatch, useSelector} from "react-redux";
 import {
     selectActiveChat,
     selectActiveChatMessages,
-    selectActiveChatUserId,
+    // selectActiveChatUserId,
     selectChats,
     publishMessage, fetchMessages
 } from "./features/chat/chatSlice";
-import {faker} from "@faker-js/faker";
 
 
 // todo: What's left:
@@ -143,7 +142,7 @@ function ChatMessagesComponent() {
 
 export function SendMessageComponent() {
     // todo: activeChatUserId from props instead of state?
-    const activeChatUserId = useSelector(selectActiveChatUserId);
+    // const activeChatUserId = useSelector(selectActiveChatUserId);
 
     const dispatch = useDispatch();
     const [inputValue, setInputValue] = useState("");
@@ -160,18 +159,21 @@ export function SendMessageComponent() {
             required/>
 
         <button type="submit"
-            onClick={() => dispatch(publishMessage({
-                id: faker.random.alphaNumeric(),
-                message: inputValue,
-                sendDatetime: faker.date.recent(),
-                // todo: use currentUserId from redux state
-                sender: {id: 404},
-                receiver: {id: activeChatUserId},
-                // todo: don't need after this logic is added to the selector,
-                // todo: direction could be calculated based on senderId/receiverId and currentUserId
-                messageDirection: 'Outgoing'
-            //    todo: clean input state after message is sent
-            }))}>
+            onClick={() => dispatch(publishMessage(
+                {}
+            //     {
+            //     id: faker.random.alphaNumeric(),
+            //     message: inputValue,
+            //     sendDatetime: faker.date.recent(),
+            //     // todo: use currentUserId from redux state
+            //     sender: {id: 404},
+            //     receiver: {id: activeChatUserId},
+            //     // todo: don't need after this logic is added to the selector,
+            //     // todo: direction could be calculated based on senderId/receiverId and currentUserId
+            //     messageDirection: 'Outgoing'
+            // //    todo: clean input state after message is sent
+            // }
+            ))}>
             {/* todo: split to a new component for the SVG icon*/}
             <svg className="w-5 h-5 text-gray-500 origin-center transform rotate-90"
                 xmlns="http://www.w3.org/2000/svg"

@@ -1,7 +1,9 @@
 import {createAsyncThunk, createSelector, createSlice} from '@reduxjs/toolkit';
+import Immutable from "immutable";
 
 const axios = require('axios');
 
+// TODO: move something similar to test-server backend for local testing
 // function generateFakeChatMessages(numberOfMessages) {
 //
 //     return [...Array(numberOfMessages).keys()].map((i) => {
@@ -30,7 +32,6 @@ const initialState = {
         status: "idle",
         value: []
     },
-    // generateFakeChatMessages(1000),
 };
 
 
@@ -38,6 +39,7 @@ export const fetchMessages = createAsyncThunk(
     'chat/fetchMessages',
     async () => {
         console.log("fetchMessages starting...");
+        // TODO: create config state and get base url for backend api from state
         const response = await axios.get('http://localhost:8080/api/direct-messages');
         console.log("fetchMessages", response);
         // The value we return becomes the `fulfilled` action payload
@@ -80,55 +82,46 @@ export const chatSlice = createSlice({
 
 export const {  selectActiveChat, publishMessage } = chatSlice.actions;
 
-// The function below is called a selector and allows us to select a value from
-// the state. Selectors can also be defined inline where they're used instead of
-// in the slice file. For example: `useSelector((state: RootState) => state.counter.value)`
-export const selectChatMessages = state => {
-    console.log("selectChatMessages", state.chat.messages.value);
-    return state.chat.messages.status === 'loaded'
-        ? state.chat.messages.value.map(chatMessage => {
-            const messageDirection = chatMessage.sender.id === state.chat.currentUserId ?
-                'Outgoing'
-                : 'Incoming';
-            return {
-                ...chatMessage,
-                messageDirection: messageDirection
-            };
-        })
-        : [];
-};
-
 export const selectCurrentUserId = state => state.chat.currentUserId;
 export const selectActiveChatUserId = state => state.chat.activeChatUserId;
+export const selectMessages = state => state.chat.messages.status === 'loaded'
+    ? state.chat.messages.value
+    : Immutable.List();
 
-
-// todo: user groupby fn from a shim
-export const selectGroupedChatMessages = createSelector(
+export const selectMessagesWithDirection = createSelector(
     [
         selectCurrentUserId,
-        selectChatMessages
+        selectMessages
     ],
-    (currentUserId, chatMessages) => {
-        console.log("chatMessages", JSON.stringify(chatMessages));
-        const groupedChatMessages = {};
+    (currentUserId, messages) => {
+        return messages.map(message => {
+            const direction =
+                message.getIn(['sender', 'id']) === currentUserId
+                    ? 'Outgoing'
+                    : 'Incoming';
+            return message.set('direction', direction);
+        });
+    }
+);
 
-        for (const chatMessage of chatMessages) {
-            const { sender, receiver } = chatMessage;
-            const groupKey = sender.id === currentUserId ? receiver.id : sender.id;
-            if (groupedChatMessages[groupKey]) {
-                groupedChatMessages[groupKey].push(chatMessage);
-            } else {
-                groupedChatMessages[groupKey] = [chatMessage];
+export const selectMessagesGrouped = createSelector(
+    [
+        selectCurrentUserId,
+        selectMessagesWithDirection
+    ],
+    (currentUserId, messages) => {
+        return messages.groupBy(
+            message => {
+                return message.getIn(['sender', 'id']) === currentUserId
+                    ? message.getIn(['receiver', 'id'])
+                    : message.getIn(['sender', 'id']);
             }
-        }
-
-        console.log("groupedChatMessages", groupedChatMessages);
-        return groupedChatMessages;
+        ).toMap();
     }
 );
 
 export const selectActiveChatMessages = createSelector(
-    [selectActiveChatUserId, selectGroupedChatMessages],
+    [selectActiveChatUserId, selectMessagesGrouped],
     (activeChatUserId, groupedChatMessages) => {
         console.log("selectActiveChatMessages", activeChatUserId, groupedChatMessages);
         return groupedChatMessages[activeChatUserId];
@@ -137,7 +130,7 @@ export const selectActiveChatMessages = createSelector(
 
 export const selectChats = createSelector(
     [
-        selectGroupedChatMessages
+        selectMessagesGrouped
     ], 
     (groupedChatMessages) => {
         return Object.keys(groupedChatMessages).map(userId => {
@@ -152,14 +145,5 @@ export const selectChats = createSelector(
 
         });
     });
-
-// We can also write thunks by hand, which may contain both sync and async logic.
-// Here's an example of conditionally dispatching actions based on current state.
-// export const incrementIfOdd = (amount) => (dispatch, getState) => {
-//     const currentValue = selectCount(getState());
-//     if (currentValue % 2 === 1) {
-//         dispatch(incrementByAmount(amount));
-//     }
-// };
 
 export default chatSlice.reducer;
