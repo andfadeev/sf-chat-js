@@ -8,6 +8,7 @@
     "@testing-library/react": "^13.3.0",
     "@testing-library/user-event": "^14.4.3",
     "axios": "^0.27.2",
+    "immutable": "^4.1.0",
     "prop-types": "^15.8.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
@@ -65,7 +66,6 @@
     "autoprefixer": "^10.4.8",
     "eslint": "^8.22.0",
     "eslint-plugin-react": "^7.31.1",
-    "immutable": "^4.1.0",
     "jest-immutable-matchers": "^3.0.0",
     "postcss": "^8.4.16",
     "tailwindcss": "^3.1.8"
