@@ -9,6 +9,7 @@ import {
     selectChatsToJS
 } from "./features/chat/chatSlice";
 import ReactTimeAgo from "react-time-ago";
+import classNames from "classnames";
 
 
 // todo: What's left:
@@ -30,9 +31,17 @@ export const userPropType = PropTypes.shape({
 });
 
 function ChatMessageComponent({message}) {
-    return <li className={`flex ${message.direction === 'Incoming' ? 'justify-start' : 'justify-end'} `}>
+    const liClass = classNames(
+        {
+            'flex': true,
+            'justify-start': message.direction === 'Incoming',
+            'justify-end': message.direction === 'Outgoing',
+        });
+    return <li className={liClass}>
         <div className="relative max-w-xl px-4 py-2 text-gray-700 bg-gray-100 rounded shadow">
-            <span className="block text-sm">{message.message}</span>
+            <span className="block text-sm">
+                {message.message}
+            </span>
             <span className="block text-[10px] pt-1">
                 <ReactTimeAgo date={message.createdAt} timeStyle="twitter-first-minute"/>
             </span>
