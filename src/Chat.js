@@ -60,8 +60,23 @@ function ChatListItemComponent({chat}) {
         ? userpic
         : "http://localhost:8080" + userpic;
 
+    const commonClassNames = 'flex items-center px-3 py-2 text-sm transition duration-150 ease-in-out border-b border-gray-300 cursor-pointer';
+    const divClassName = classNames(
+        commonClassNames,
+        chat.isActive
+            ? [
+                'bg-indigo-400',
+                'hover:bg-indigo-400'
+            ]
+            : [
+                'odd:bg-gray-100',
+                'hover:bg-gray-100'
+            ]
+    );
+
     return <div onClick={() => dispatch(selectActiveChat(chat.id))}
-        className="flex items-center px-3 py-2 text-sm transition duration-150 ease-in-out bg-gray-100 border-b border-gray-300 cursor-pointer focus:outline-none ">
+        // className="flex items-center px-3 py-2 text-sm transition duration-150 ease-in-out odd:bg-gray-100 hover:bg-gray-100 border-b border-gray-300 cursor-pointer focus:outline-none ">
+        className={divClassName}>
         <img className="object-fill w-10 h-10 rounded-full"
             src={fixedUserpic}
             alt={chat.chatUser.name}/>
@@ -90,6 +105,7 @@ const chatListItemPropType = PropTypes.shape({
     recentMessage: chatMessagePropType.isRequired,
     chatUser: userPropType.isRequired,
     imageUrl: PropTypes.string.isRequired,
+    isActive: PropTypes.bool.isRequired,
 });
 
 ChatListItemComponent.propTypes = {

@@ -1,5 +1,11 @@
 import chatReducer, {
-    selectActiveChat, selectActiveChatMessages, selectChats, selectMessages, selectMessagesGroupedSorted, selectMessagesWithDirection,
+    selectActiveChat,
+    selectActiveChatMessages,
+    selectChats,
+    selectChatsToJS,
+    selectMessages,
+    selectMessagesGroupedSorted,
+    selectMessagesWithDirection,
 } from './chatSlice';
 import {faker} from "@faker-js/faker";
 import Immutable, {List} from "immutable";
@@ -26,7 +32,7 @@ describe('testing chatSlice selectors', () => {
         createdAt: '2022-09-20T00:00:00.000Z'
     };
 
-    const message1WithDirection = {
+    const message1DirectionOutgoing = {
         ...message1,
         direction: 'Outgoing'
     };
@@ -136,7 +142,7 @@ describe('testing chatSlice selectors', () => {
             };
 
         const expected = Immutable.fromJS([
-            message1WithDirection,
+            message1DirectionOutgoing,
             message2WithDirection,
             message3WithDirection,
             message4WithDirection
@@ -159,7 +165,7 @@ describe('testing chatSlice selectors', () => {
             };
 
         const expected = Immutable.fromJS(new Map([
-            [otherUserId1, [message1WithDirection]],
+            [otherUserId1, [message1DirectionOutgoing]],
             [otherUserId2, [
                 message2WithDirection,
                 message3WithDirection,
@@ -177,6 +183,7 @@ describe('testing chatSlice selectors', () => {
             {
                 chat: {
                     currentUserId: currentUserId,
+                    activeChatUserId: otherUserId2,
                     messages: {
                         status: "loaded",
                         value: directMessages
@@ -187,21 +194,22 @@ describe('testing chatSlice selectors', () => {
         const expected = Immutable.fromJS([
             {
                 id: otherUserId1,
-                recentMessage: message1WithDirection,
-                chatUser: message1WithDirection.receiver
+                recentMessage: message1DirectionOutgoing,
+                chatUser: message1DirectionOutgoing.receiver,
+                isActive: false
             },
             {
                 id: otherUserId2,
                 recentMessage: message2WithDirection,
-                chatUser: message2WithDirection.sender
+                chatUser: message2WithDirection.sender,
+                isActive: true
             }
         ])
             .sortBy(chat => chat.getIn(['recentMessage', 'createdAt']))
             .reverse();
 
         expect(selectChats(state)).toBeImmutableSeq();
-        // expect(selectChats(state)).toEqualImmutable(Immutable.Seq());
-        expect(selectChats(state)).toEqualImmutable(expected.toSeq());
+        expect(selectChatsToJS(state)).toEqual(expected.toJS());
     });
 
     it('selectActiveChatMessages: active chat messages are returned and sorted by createdAt', () => {

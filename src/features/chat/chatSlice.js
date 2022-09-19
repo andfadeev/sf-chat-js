@@ -118,9 +118,14 @@ export const selectActiveChatMessagesToJS = createSelector(
 export const selectChats = createSelector(
     [
         selectMessagesGroupedSorted,
-        selectCurrentUserId
+        selectCurrentUserId,
+        selectActiveChatUserId
     ], 
-    (messagesGroupedSorted, currentUserId) => {
+    (
+        messagesGroupedSorted,
+        currentUserId,
+        activeChatUserId
+    ) => {
         return messagesGroupedSorted
             .keySeq()
             .map(userId => {
@@ -132,7 +137,8 @@ export const selectChats = createSelector(
                 return Immutable.Map({
                     id: userId,
                     recentMessage: recentMessage,
-                    chatUser: chatUser
+                    chatUser: chatUser,
+                    isActive: userId === activeChatUserId
                 });
             })
             .sortBy(chat => chat.getIn(['recentMessage', 'createdAt']))
