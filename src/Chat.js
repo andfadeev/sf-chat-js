@@ -26,6 +26,7 @@ export const chatMessagePropType = PropTypes.shape({
 
 export const userPropType = PropTypes.shape({
     userpic: PropTypes.string.isRequired,
+    name: PropTypes.string.isRequired,
 });
 
 function ChatMessageComponent({message}) {
@@ -44,19 +45,32 @@ ChatMessageComponent.propTypes = {
 };
 
 function ChatListItemComponent({chat}) {
-
     const dispatch = useDispatch();
+    const userpic = chat.chatUser.userpic;
+    const fixedUserpic = userpic.startsWith("http")
+        ? userpic
+        : "http://localhost:8080" + userpic;
 
     return <div onClick={() => dispatch(selectActiveChat(chat.id))}
         className="flex items-center px-3 py-2 text-sm transition duration-150 ease-in-out bg-gray-100 border-b border-gray-300 cursor-pointer focus:outline-none ">
-        <img className="object-cover w-10 h-10 rounded-full"
-            src={chat.chatUser.userpic} alt="username"/>
+        <img className="object-fill w-10 h-10 rounded-full"
+            src={fixedUserpic}
+            alt={chat.chatUser.name}/>
         <div className="w-full pb-2">
             <div className="flex justify-between">
-                <span className="block ml-2 font-semibold text-gray-600">{chat.name}</span>
-                {/*<span className="block ml-2 text-sm text-gray-600">{chat.lastMessageDateTime.toDateString()}</span>*/}
+                <span className="block ml-2 font-semibold text-gray-600">
+                    {chat.chatUser.name}
+                </span>
+                <span className="block ml-2 text-[10px] text-gray-600">
+                    <ReactTimeAgo
+                        date={chat.recentMessage.createdAt}
+                        timeStyle="twitter-first-minute"
+                    />
+                </span>
             </div>
-            <div className="block ml-2 text-sm text-gray-600 overflow-hidden truncate">{chat.recentMessage.message}</div>
+            <div className="block ml-2 text-sm text-gray-600 overflow-hidden truncate">
+                {chat.recentMessage.message}
+            </div>
         </div>
     </div>;
 }
@@ -64,8 +78,6 @@ function ChatListItemComponent({chat}) {
 const chatListItemPropType = PropTypes.shape({
     id: PropTypes.number.isRequired,
     name: PropTypes.string.isRequired,
-    // lastMessageDateTime: PropTypes.string.isRequired,
-    // lastMessage: PropTypes.string.isRequired,
     recentMessage: chatMessagePropType.isRequired,
     chatUser: userPropType.isRequired,
     imageUrl: PropTypes.string.isRequired,
@@ -81,26 +93,11 @@ function ChatListComponent() {
     return <div className="border-r border-gray-300 lg:col-span-1">
         <ul className="overflow-y-auto h-[40rem] ">
             <h2 className="my-2 mb-2 ml-2 text-lg text-gray-600">Чаты</h2>
-            {/*<h2 className="my-2 mb-2 ml-2 text-lg text-gray-600">{JSON.stringify(chats)}</h2>*/}
             {/*<SearchBarComponent></SearchBarComponent>*/}
             <li>
                 {chats.map(function(chat, index){
                     return <ChatListItemComponent chat={chat} key={index} />;
                 })}
-
-                {/*<a href="asdf"*/}
-                {/*    className="flex items-center px-3 py-2 text-sm transition duration-150 ease-in-out border-b border-gray-300 cursor-pointer hover:bg-gray-100 focus:outline-none">*/}
-                {/*    <img className="object-cover w-10 h-10 rounded-full"*/}
-                {/*        src="https://cdn.pixabay.com/photo/2018/09/12/12/14/man-3672010__340.jpg" alt="username"/>*/}
-                {/*    <div className="w-full pb-2">*/}
-                {/*        <div className="flex justify-between">*/}
-                {/*            <span className="block ml-2 font-semibold text-gray-600">Jhon Don</span>*/}
-                {/*            <span className="block ml-2 text-sm text-gray-600">25 minutes</span>*/}
-                {/*        </div>*/}
-                {/*        <span className="block ml-2 text-sm text-gray-600">bye</span>*/}
-                {/*    </div>*/}
-                {/*</a>*/}
-
             </li>
         </ul>
     </div>;
@@ -127,7 +124,6 @@ function ChatMessagesComponent() {
     const chatMessages = useSelector(selectActiveChatMessagesToJS);
 
     useEffect(() => {
-        // 👇️ scroll to bottom every time messages change
         bottomRef.current?.scrollIntoView({behavior: 'smooth'});
     }, [chatMessages]);
 
@@ -201,11 +197,15 @@ export function ChatComponent() {
                 <div className="w-full">
                     {/* todo: split to a new component, eg ActiveChatUserComponent or something */}
                     <div className="relative flex items-center p-3 border-b border-gray-300">
-                        <img className="object-cover w-10 h-10 rounded-full"
-                            src="https://cdn.pixabay.com/photo/2018/01/15/07/51/woman-3083383__340.jpg" alt="username"/>
-                        <span className="block ml-2 font-bold text-gray-600">Emma</span>
-                        <span className="absolute w-3 h-3 bg-green-600 rounded-full left-10 top-3">
+                        <img
+                            className="object-cover w-10 h-10 rounded-full"
+                            src="https://cdn.pixabay.com/photo/2018/01/15/07/51/woman-3083383__340.jpg"
+                            alt="username"/>
+                        <span className="block ml-2 font-bold text-gray-600">
+                            Emma
                         </span>
+                        {/*<span className="absolute w-3 h-3 bg-green-600 rounded-full left-10 top-3">*/}
+                        {/*</span>*/}
                     </div>
                     <ChatMessagesComponent/>
                     <SendMessageComponent/>

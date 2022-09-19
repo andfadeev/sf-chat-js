@@ -5,17 +5,17 @@ import {faker} from "@faker-js/faker";
 import Immutable, {List} from "immutable";
 import * as immutableMatchers from 'jest-immutable-matchers';
 
-describe('testing chat slice selectors', () => {
+describe('testing chatSlice selectors', () => {
     beforeEach(function () {
         expect.extend(immutableMatchers);
     });
 
-    const currentUserId = faker.random.alphaNumeric();
-    const otherUserId1 = faker.random.alphaNumeric();
-    const otherUserId2 = faker.random.alphaNumeric();
+    const currentUserId = 'current-user-id';
+    const otherUserId1 = 'other-user-id-1';
+    const otherUserId2 = 'other-user-id-2';
 
     const message1 = {
-        id: faker.random.alphaNumeric(),
+        id: '1',
         message: faker.lorem.text(),
         sender: {
             id: currentUserId
@@ -23,7 +23,7 @@ describe('testing chat slice selectors', () => {
         receiver: {
             id: otherUserId1
         },
-        createdAt: faker.date.recent()
+        createdAt: '2022-09-20T00:00:00.000Z'
     };
 
     const message1WithDirection = {
@@ -31,12 +31,12 @@ describe('testing chat slice selectors', () => {
         direction: 'Outgoing'
     };
 
-    const message2CreatedAt = faker.date.recent(2);
-    const message3CreatedAt = faker.date.recent(3);
-    const message4CreatedAt = faker.date.recent(4);
+    const message2CreatedAt = '2022-09-19T00:00:00.000Z';
+    const message3CreatedAt = '2022-09-18T00:00:00.000Z';
+    const message4CreatedAt = '2022-09-17T00:00:00.000Z';
 
     const message2 = {
-        id: faker.random.alphaNumeric(),
+        id: '2',
         message: faker.lorem.text(),
         sender: {
             id: otherUserId2
@@ -53,7 +53,7 @@ describe('testing chat slice selectors', () => {
     };
 
     const message3 = {
-        id: faker.random.alphaNumeric(),
+        id: '3',
         message: faker.lorem.text(),
         sender: {
             id: currentUserId
@@ -70,7 +70,7 @@ describe('testing chat slice selectors', () => {
     };
 
     const message4 = {
-        id: faker.random.alphaNumeric(),
+        id: '4',
         message: faker.lorem.text(),
         sender: {
             id: otherUserId2
@@ -86,15 +86,13 @@ describe('testing chat slice selectors', () => {
         direction: "Incoming"
     };
 
-    const directMessages = Immutable.fromJS(
-        faker.helpers.shuffle(
-            [
-                message1,
-                message2,
-                message3,
-                message4
-            ]
-        )
+    const directMessages = faker.helpers.shuffle(
+        [
+            message1,
+            message2,
+            message3,
+            message4
+        ]
     );
 
     it('selectMessages: returns empty array when status is not equal to loaded', () => {
@@ -122,7 +120,7 @@ describe('testing chat slice selectors', () => {
                 }
             };
 
-        expect(selectMessages(state)).toEqualImmutable(directMessages);
+        expect(selectMessages(state)).toEqualImmutable(Immutable.fromJS(directMessages));
     });
 
     it('selectMessagesWithDirection: direction field is added', () => {
@@ -160,17 +158,18 @@ describe('testing chat slice selectors', () => {
                 }
             };
 
-        const expected2 = new Map([
+        const expected = Immutable.fromJS(new Map([
             [otherUserId1, [message1WithDirection]],
             [otherUserId2, [
                 message2WithDirection,
                 message3WithDirection,
                 message4WithDirection
             ]]
-        ]);
+        ])).mapEntries(([userId, messages]) =>
+            [userId, messages.sortBy(message => message.get('createdAt'))]);
 
         expect(selectMessagesGroupedSorted(state)).toBeImmutableMap();
-        expect(selectMessagesGroupedSorted(state)).toEqualImmutable(Immutable.fromJS(expected2));
+        expect(selectMessagesGroupedSorted(state)).toEqualImmutable(expected);
     });
 
     it('selectChats: list of chats is returned', () => {
@@ -185,7 +184,7 @@ describe('testing chat slice selectors', () => {
                 }
             };
 
-        const expected = [
+        const expected = Immutable.fromJS([
             {
                 id: otherUserId1,
                 recentMessage: message1WithDirection,
@@ -196,13 +195,16 @@ describe('testing chat slice selectors', () => {
                 recentMessage: message2WithDirection,
                 chatUser: message2WithDirection.sender
             }
-        ];
+        ])
+            .sortBy(chat => chat.getIn(['recentMessage', 'createdAt']))
+            .reverse();
 
         expect(selectChats(state)).toBeImmutableSeq();
-        expect(selectChats(state)).toEqualImmutable(Immutable.fromJS(expected).toSeq());
+        // expect(selectChats(state)).toEqualImmutable(Immutable.Seq());
+        expect(selectChats(state)).toEqualImmutable(expected.toSeq());
     });
 
-    it('selectActiveChatMessages: active chat messages are returned', () => {
+    it('selectActiveChatMessages: active chat messages are returned and sorted by createdAt', () => {
         const state =
             {
                 chat: {
@@ -215,14 +217,14 @@ describe('testing chat slice selectors', () => {
                 }
             };
 
-        const expected = [
-            message2WithDirection,
+        const expected = Immutable.fromJS([
+            message4WithDirection,
             message3WithDirection,
-            message4WithDirection
-        ];
+            message2WithDirection
+        ]).sortBy(message => message.get('createdAt'));
 
         expect(selectActiveChatMessages(state)).toBeImmutableList();
-        expect(selectActiveChatMessages(state)).toEqualImmutable(Immutable.fromJS(expected));
+        expect(selectActiveChatMessages(state)).toEqualImmutable(expected);
     });
 });
 

@@ -3,11 +3,10 @@ import Immutable from "immutable";
 
 const axios = require('axios');
 
-
 // TODO: start using redux
 const initialState = {
     // TODO: add fetch session call
-    // currentUserId: 404,
+    currentUserId: 404,
     // TODO: show `select chat message if nothing is selected`
     // activeChatUserId: 0,
     messages: {
@@ -22,7 +21,6 @@ export const fetchMessages = createAsyncThunk(
     async () => {
         // TODO: create config state and get base url for backend api from state
         const response = await axios.get('http://localhost:8080/api/direct-messages');
-        console.log("fetchMessages", response);
         // The value we return becomes the `fulfilled` action payload
         return response.data;
     }
@@ -33,28 +31,23 @@ export const chatSlice = createSlice({
     initialState,
     reducers: {
         selectActiveChat: (state, action) => {
-            console.log("selectActiveChat", action.payload);
             state.activeChatUserId = action.payload;
         },
         publishMessage: (state, action) => {
-            console.log("publishMessage", action.payload);
             state.messages.value.push(action.payload);
         },
     },
     extraReducers: (builder) => {
         builder
             .addCase(fetchMessages.pending, (state) => {
-                console.log("fetchMessages.pending");
                 state.messages.status = 'loading';
                 state.messages.value = [];
             })
             .addCase(fetchMessages.fulfilled, (state, action) => {
-                console.log("fetchMessages.fulfilled", action);
                 state.messages.status = 'loaded';
                 state.messages.value = action.payload;
             })
             .addCase(fetchMessages.rejected, (state, action) => {
-                console.log("fetchMessages.rejected", action);
                 state.messages.status = 'rejected';
                 state.messages.value += action.payload;
             });
@@ -101,7 +94,7 @@ export const selectMessagesGroupedSorted = createSelector(
 
         return messagesGrouped
             .mapEntries(([userId, messages]) =>
-                [userId, messages.sortBy(message => message.createdAt)]);
+                [userId, messages.sortBy(message => message.get('createdAt'))]);
     }
 );
 
@@ -110,9 +103,9 @@ export const selectActiveChatMessages = createSelector(
         selectActiveChatUserId,
         selectMessagesGroupedSorted
     ],
-    (activeChatUserId, messagesGrouped) => {
+    (activeChatUserId, messagesGroupedSorted) => {
         return activeChatUserId
-            ? messagesGrouped.get(activeChatUserId)
+            ? messagesGroupedSorted.get(activeChatUserId)
             : Immutable.List();
     }
 );
@@ -122,29 +115,28 @@ export const selectActiveChatMessagesToJS = createSelector(
     (chatMessages) => chatMessages.toJS()
 );
 
-// TODO: sort chats by recent message date
 export const selectChats = createSelector(
     [
         selectMessagesGroupedSorted,
         selectCurrentUserId
     ], 
-    (messagesGrouped, currentUserId) => {
-        return messagesGrouped
+    (messagesGroupedSorted, currentUserId) => {
+        return messagesGroupedSorted
             .keySeq()
             .map(userId => {
-                const recentMessage = messagesGrouped.get(userId).first();
+                const recentMessage = messagesGroupedSorted.get(userId).last();
                 const chatUser = recentMessage.getIn(['sender', 'id']) === currentUserId
                     ? recentMessage.get('receiver')
                     : recentMessage.get('sender');
 
-                return Immutable.fromJS(
-                    {
-                        id: userId,
-                        recentMessage: recentMessage,
-                        chatUser: chatUser
-                    }
-                );
-            });
+                return Immutable.Map({
+                    id: userId,
+                    recentMessage: recentMessage,
+                    chatUser: chatUser
+                });
+            })
+            .sortBy(chat => chat.getIn(['recentMessage', 'createdAt']))
+            .reverse();
     });
 
 export const selectChatsToJS = createSelector(
