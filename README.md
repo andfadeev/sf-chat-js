@@ -51,3 +51,10 @@ Formatting with `eslint`:
 ```
 npx eslint src/**/*.js --fix
 ```
+
+local dev:
+```shell
+json-server --watch db.json -p 8080
+
+
+```

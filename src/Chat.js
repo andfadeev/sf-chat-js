@@ -4,12 +4,12 @@ import {useDispatch, useSelector} from "react-redux";
 import {
     selectActiveChat,
     selectActiveChatMessagesToJS,
-    publishMessage,
-    fetchMessages,
-    selectChatsToJS
+    selectChatsToJS,
+    selectActiveChatUser, selectCurrentUserId,
 } from "./features/chat/chatSlice";
 import ReactTimeAgo from "react-time-ago";
 import classNames from "classnames";
+import { useAddNewDirectMessageMutation } from "./features/api/apiSlice";
 
 
 // todo: What's left:
@@ -18,6 +18,13 @@ import classNames from "classnames";
 // todo: 3. fix css
 // todo: 4. remove features/counter (generated from the template)
 
+const PrettyJSON = ({data}) => {
+    return <pre>{JSON.stringify(data, null, 2)}</pre>;
+};
+
+PrettyJSON.propTypes = {
+    data: PropTypes.object.isRequired
+};
 
 export const chatMessagePropType = PropTypes.shape({
     message: PropTypes.string.isRequired,
@@ -42,9 +49,19 @@ function ChatMessageComponent({message}) {
             <span className="block text-sm">
                 {message.message}
             </span>
-            <span className="block text-[10px] pt-1">
-                <ReactTimeAgo date={message.createdAt} timeStyle="twitter-first-minute"/>
-            </span>
+            <div className="flex justify-between gap-10">
+                <span className="block text-[10px] pt-1">
+                    {
+                        message.direction === 'Outgoing'
+                            ? 'Вы'
+                            : 'Какой-то уебак'
+                    }
+
+                </span>
+                <span className="block text-[10px] pt-1">
+                    <ReactTimeAgo date={message.createdAt} timeStyle="twitter-first-minute"/>
+                </span>
+            </div>
         </div>
     </li>;
 }
@@ -65,8 +82,8 @@ function ChatListItemComponent({chat}) {
         commonClassNames,
         chat.isActive
             ? [
-                'bg-indigo-400',
-                'hover:bg-indigo-400'
+                'bg-indigo-100',
+                'hover:bg-indigo-100'
             ]
             : [
                 'odd:bg-gray-100',
@@ -75,9 +92,8 @@ function ChatListItemComponent({chat}) {
     );
 
     return <div onClick={() => dispatch(selectActiveChat(chat.id))}
-        // className="flex items-center px-3 py-2 text-sm transition duration-150 ease-in-out odd:bg-gray-100 hover:bg-gray-100 border-b border-gray-300 cursor-pointer focus:outline-none ">
         className={divClassName}>
-        <img className="object-fill w-10 h-10 rounded-full"
+        <img className="object-fill shrink-0 w-10 h-10 rounded-full"
             src={fixedUserpic}
             alt={chat.chatUser.name}/>
         <div className="w-full pb-2">
@@ -115,13 +131,19 @@ ChatListItemComponent.propTypes = {
 function ChatListComponent() {
     const chats = useSelector(selectChatsToJS);
 
-    return <div className="border-r border-gray-300 lg:col-span-1">
+    return <div className="border-r border-gray-300 lg:col-span-1 flex flex-col">
+        <h2 className="px-3 text-lg font-semibold text-gray-600 py-5 shadow-md">
+            Личные сообщения
+        </h2>
         <ul className="overflow-y-auto h-[40rem] ">
-            <h2 className="my-2 mb-2 ml-2 text-lg text-gray-600">Чаты</h2>
+
             {/*<SearchBarComponent></SearchBarComponent>*/}
             <li>
                 {chats.map(function(chat, index){
-                    return <ChatListItemComponent chat={chat} key={index} />;
+                    return <ChatListItemComponent
+                        chat={chat}
+                        key={index}
+                    />;
                 })}
             </li>
         </ul>
@@ -162,80 +184,111 @@ function ChatMessagesComponent() {
     </div>;
 }
 
-export function SendMessageComponent() {
-    // todo: activeChatUserId from props instead of state?
-    // const activeChatUserId = useSelector(selectActiveChatUserId);
+const SendMessageSVG = ({isDisabled}) => {
+    const c = classNames(
+        {
+            'w-5 h-5 origin-center transform rotate-90': true,
+            'text-gray-500': !isDisabled,
+            'text-gray-300': isDisabled,
+        });
+    return <svg className={c}
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 20 20" fill="currentColor">
+        <path
+            d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"/>
+    </svg>;
+};
 
-    const dispatch = useDispatch();
+SendMessageSVG.propTypes = {
+    isDisabled: PropTypes.bool.isRequired,
+};
+
+export function SendMessageComponent() {
+    const chatUser = useSelector(selectActiveChatUser);
+    const currentUserId = useSelector(selectCurrentUserId);
+
     const [inputValue, setInputValue] = useState("");
 
-    return <div className="flex items-center justify-between w-full p-3 border-t border-gray-300">
+    const [addNewDirectMessage] = useAddNewDirectMessageMutation();
 
-        {/* todo: support onEnter*/}
+    const isNonEmptyString = (value) => typeof value == 'string' && value.trim().length > 0;
+
+    const sendDirectMessage = () => {
+        const directMessage = {
+            "receiver_id": chatUser.id,
+            "sender_id": currentUserId,
+            "message": inputValue,
+        };
+
+        addNewDirectMessage(directMessage).unwrap();
+
+        setInputValue("");
+    };
+
+    const handleKeyDown = (event) => {
+        if (event.key === 'Enter') {
+            sendDirectMessage();
+        }
+    };
+
+    const isDisabled = !isNonEmptyString(inputValue);
+
+    return <div className="flex items-center justify-between w-full p-3 border-t border-gray-300">
         <input type="text"
             placeholder="Напишите сообщение"
-            className="block w-full py-2 pl-4 mx-3 bg-gray-100 rounded-full outline-none focus:text-gray-700"
+            className="block w-full py-2 pl-4 mx-3 bg-gray-100 rounded outline-none focus:text-gray-700"
             name="message"
             value={inputValue}
             onChange={e => setInputValue(e.target.value)}
+            onKeyDown={handleKeyDown}
             required/>
 
         <button type="submit"
-            onClick={() => dispatch(publishMessage(
-                {}
-            //     {
-            //     id: faker.random.alphaNumeric(),
-            //     message: inputValue,
-            //     sendDatetime: faker.date.recent(),
-            //     // todo: use currentUserId from redux state
-            //     sender: {id: 404},
-            //     receiver: {id: activeChatUserId},
-            //     // todo: don't need after this logic is added to the selector,
-            //     // todo: direction could be calculated based on senderId/receiverId and currentUserId
-            //     messageDirection: 'Outgoing'
-            // //    todo: clean input state after message is sent
-            // }
-            ))}>
-            {/* todo: split to a new component for the SVG icon*/}
-            <svg className="w-5 h-5 text-gray-500 origin-center transform rotate-90"
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 20 20" fill="currentColor">
-                <path
-                    d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"/>
-            </svg>
+            onClick={sendDirectMessage}
+            disabled={isDisabled}>
+            <SendMessageSVG isDisabled={isDisabled}/>
         </button>
     </div>;
 }
 
+function ActiveChatUserComponent() {
+    const chatUser = useSelector(selectActiveChatUser);
+    return chatUser && <div className="relative flex items-center p-3 border-b border-gray-300">
+
+        <img className="object-cover w-10 h-10 rounded-full"
+            src={chatUser.userpic}
+            alt={chatUser.name}
+            onError={({ currentTarget }) => {
+                currentTarget.onerror = null;
+                currentTarget.src="http://localhost:8080/img/male.png";
+            }}
+        />
+        <span className="block ml-2 font-bold text-gray-600">
+            {chatUser.name}
+        </span>
+    </div>;
+}
+
 export function ChatComponent() {
-
-    const dispatch = useDispatch();
-
-    useEffect(() => {
-        dispatch(fetchMessages());
-    });
-
-    return <div className="container mx-auto">
+    const activeChatUser = useSelector(selectActiveChatUser);
+    return <div className="container mx-auto max-h-screen">
         <div className="min-w-full border rounded lg:grid lg:grid-cols-3">
             <ChatListComponent/>
             <div className="col-span-1 lg:col-span-2 lg:block">
-                <div className="w-full">
-                    {/* todo: split to a new component, eg ActiveChatUserComponent or something */}
-                    <div className="relative flex items-center p-3 border-b border-gray-300">
-                        <img
-                            className="object-cover w-10 h-10 rounded-full"
-                            src="https://cdn.pixabay.com/photo/2018/01/15/07/51/woman-3083383__340.jpg"
-                            alt="username"/>
-                        <span className="block ml-2 font-bold text-gray-600">
-                            Emma
-                        </span>
-                        {/*<span className="absolute w-3 h-3 bg-green-600 rounded-full left-10 top-3">*/}
-                        {/*</span>*/}
+                { activeChatUser
+                    ? <div className="w-full">
+                        <ActiveChatUserComponent/>
+                        <ChatMessagesComponent/>
+                        <SendMessageComponent/>
                     </div>
-                    <ChatMessagesComponent/>
-                    <SendMessageComponent/>
-                </div>
+                    : <div className="grid w-full h-full place-items-center">
+                        <span className="p-2 bg-gray-100 shadow-sm rounded text-sm text-gray-500">
+                            Выберите чат для начала общения...
+                        </span>
+                    </div>
+                }
             </div>
+
         </div>
     </div>;
 }

@@ -1,30 +1,8 @@
-import {createAsyncThunk, createSelector, createSlice} from '@reduxjs/toolkit';
+import {createSelector, createSlice} from '@reduxjs/toolkit';
 import Immutable from "immutable";
+import {selectGetSessionResult, selectGetDirectMessagesResult} from "../api/apiSlice";
 
-const axios = require('axios');
-
-// TODO: start using redux
-const initialState = {
-    // TODO: add fetch session call
-    currentUserId: 404,
-    // TODO: show `select chat message if nothing is selected`
-    // activeChatUserId: 0,
-    messages: {
-        status: "idle",
-        value: []
-    },
-};
-
-
-export const fetchMessages = createAsyncThunk(
-    'chat/fetchMessages',
-    async () => {
-        // TODO: create config state and get base url for backend api from state
-        const response = await axios.get('http://localhost:8080/api/direct-messages');
-        // The value we return becomes the `fulfilled` action payload
-        return response.data;
-    }
-);
+const initialState = {};
 
 export const chatSlice = createSlice({
     name: 'chat',
@@ -37,45 +15,50 @@ export const chatSlice = createSlice({
             state.messages.value.push(action.payload);
         },
     },
-    extraReducers: (builder) => {
-        builder
-            .addCase(fetchMessages.pending, (state) => {
-                state.messages.status = 'loading';
-                state.messages.value = [];
-            })
-            .addCase(fetchMessages.fulfilled, (state, action) => {
-                state.messages.status = 'loaded';
-                state.messages.value = action.payload;
-            })
-            .addCase(fetchMessages.rejected, (state, action) => {
-                state.messages.status = 'rejected';
-                state.messages.value += action.payload;
-            });
-    },
 });
 
 export const {  selectActiveChat, publishMessage } = chatSlice.actions;
 
-export const selectCurrentUserId = state => state.chat.currentUserId;
 export const selectActiveChatUserId = state => state.chat.activeChatUserId;
-export const selectMessages = state => state.chat.messages.status === 'loaded'
-    ? Immutable.fromJS(state.chat.messages.value)
-    : Immutable.List();
+
+export const selectCurrentUserId = createSelector(
+    [
+        selectGetSessionResult
+    ],
+    (getSessionResult) => {
+        return getSessionResult.status === 'fulfilled' && getSessionResult.data.id;
+    }
+);
+
+export const selectMessages = createSelector(
+    [
+        selectGetDirectMessagesResult
+    ],
+    (messages) => {
+        console.log("messagez:", messages);
+        // return messages.status === 'fulfilled'
+        return messages.data
+            ? Immutable.fromJS(messages.data)
+            : Immutable.List();
+    }
+);
+
+export const selectMessagesWithDirectionCombiner = (currentUserId, messages) => {
+    return messages.map(message => {
+        const direction =
+            message.getIn(['sender', 'id']) === currentUserId
+                ? 'Outgoing'
+                : 'Incoming';
+        return message.set('direction', direction);
+    });
+};
 
 export const selectMessagesWithDirection = createSelector(
     [
         selectCurrentUserId,
         selectMessages
     ],
-    (currentUserId, messages) => {
-        return messages.map(message => {
-            const direction =
-                message.getIn(['sender', 'id']) === currentUserId
-                    ? 'Outgoing'
-                    : 'Incoming';
-            return message.set('direction', direction);
-        });
-    }
+    selectMessagesWithDirectionCombiner
 );
 
 export const selectMessagesGroupedSorted = createSelector(
@@ -98,6 +81,32 @@ export const selectMessagesGroupedSorted = createSelector(
     }
 );
 
+export const selectChatUsers = createSelector(
+    [selectMessages],
+    (messages) => {
+        return Immutable.Map(
+            messages
+                .flatMap(directMessage => {
+                    return [
+                        directMessage.get('sender'),
+                        directMessage.get('receiver')];
+                })
+                .toSet()
+                .map(user => [user.get('id'), user]));
+    }
+);
+
+
+export const selectActiveChatUser = createSelector(
+    [
+        selectChatUsers,
+        selectActiveChatUserId
+    ],
+    (chatUsers, activeChatUserId) => {
+        return activeChatUserId && chatUsers.get(activeChatUserId)?.toJS();
+    }
+);
+
 export const selectActiveChatMessages = createSelector(
     [
         selectActiveChatUserId,
@@ -112,7 +121,7 @@ export const selectActiveChatMessages = createSelector(
 
 export const selectActiveChatMessagesToJS = createSelector(
     [selectActiveChatMessages],
-    (chatMessages) => chatMessages.toJS()
+    (chatMessages) => chatMessages?.toJS()
 );
 
 export const selectChats = createSelector(
